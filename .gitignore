@@ -1,0 +1,22 @@
+# git ignore file
+
+# image extension
+*.png
+*.jpg
+
+# python 
+*.cpython-36.pyc
+*.egg
+*.egg-info
+
+# build specific folders
+/build
+/demo/processed_images/
+/demo/model
+/demo/pages/classes.txt
+
+# user specific folder
+/basilis
+
+# others
+.vscode
