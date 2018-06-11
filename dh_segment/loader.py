@@ -3,20 +3,23 @@ import os
 from threading import Semaphore
 import numpy as np
 import tempfile
-from imageio import imsave, imread
+from scipy.misc import imsave, imread
 
 _original_shape_key = 'original_shape'
 
 
 class LoadedModel:
-    def __init__(self, model_base_dir, predict_mode='filename', num_parallel_predictions=2):
-        if os.path.exists(os.path.join(model_base_dir, 'saved_model.pbtxt')) or \
-                os.path.exists(os.path.join(model_base_dir, 'saved_model.pb')):
-            model_dir = model_base_dir
+    def __init__(self, model_base_dir, model_name, predict_mode='filename', num_parallel_predictions=2):
+        
+        mdir = os.path.join(model_base_dir, model_name)
+
+        if os.path.exists(os.path.join(mdir, 'saved_model.pbtxt')) or \
+                os.path.exists(os.path.join(mdir, 'saved_model.pb')):
+            model_dir = mdir
         else:
-            possible_dirs = os.listdir(model_base_dir)
-            model_dir = os.path.join(model_base_dir, max(possible_dirs))  # Take latest export
-        print("Loading {}".format(model_dir))
+            possible_dirs = os.listdir(mdir)
+            model_dir = os.path.join(mdir, max(possible_dirs))  # Take latest export
+        # print("Loading {}".format(model_dir))
 
         if predict_mode == 'filename':
             input_dict_key = 'filename'
@@ -36,6 +39,7 @@ class LoadedModel:
         else:
             raise NotImplementedError
         self.predict_mode = predict_mode
+        self.name = model_name
 
         self.sess = tf.get_default_session()
         loaded_model = tf.saved_model.loader.load(self.sess, ['serve'], model_dir)
