@@ -45,13 +45,16 @@ if __name__ == '__main__':
         for filename in tqdm(input_files, desc='Processed files'):
             
             probList = list()
-
             basename = os.path.basename(filename).split('.')[0]
+
+            if os.path.exists(os.path.join(output_dir, basename + '-probs.png')):
+                print(basename + " skipped...")
 
             # for m in models:
             for mn in modelnames:
 
                 # TODO: I cannot cache models?!
+                # NOTE: here we loose an incredible amount of memory...
                 m = LoadedModel(bp + 'model/', mn, predict_mode='filename')
                 
                 # For each image, predict each pixel's label
