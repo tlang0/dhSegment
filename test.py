@@ -20,7 +20,9 @@ if __name__ == '__main__':
 
 
     # diem: config
-    bp = '../../../basilis/'
+    #bp = '../../../basilis/'
+    bp = '../'
+
     modelnames = ['hw', 'mp', 'im']
 
     # I/O
