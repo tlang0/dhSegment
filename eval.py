@@ -13,8 +13,6 @@ def eval_jaccard(filepath_result, filepath_gt):
     img_gt = imread(filepath_gt)
 
     maxlabel = np.amax(img_gt)
-    intersection_area_overall = 0
-    unions_overall = np.logical_or(np.not_equal(img_result, BGLABEL), np.not_equal(img_gt, BGLABEL))
     data = []
     for label in range(maxlabel + 1):
         if label == BGLABEL:
@@ -39,6 +37,7 @@ def eval_jaccard(filepath_result, filepath_gt):
     return jaccard_overall, data
 
 def write_results(output_path, results_batch):
+    """results_batch must be a list of tuples (imagename, data), where data is a list of tuples"""
     with open(output_path, "w") as f:
         # iterate over results of all images
         for results in results_batch:
@@ -51,22 +50,46 @@ def main():
         print("usage:\n{} <filepath_result> <filepath_gt> <output_path>".format(sys.argv[0]))
         return
 
-    result_path = sys.argv[1]
-    gt_path = sys.argv[2]
-    output_path = sys.argv[3]
+    result_path_str = sys.argv[1]
+    gt_path_str = sys.argv[2]
+    output_path_str = sys.argv[3]
 
-    #if Path(result_path).is_file() and Path(gt_path).is_file():
-    imagename = PurePath(result_path).stem
+    result_path = Path(result_path_str)
+    gt_path = Path(gt_path_str)
 
-    jaccard_overall, data = eval_jaccard(result_path, gt_path)
-    if len(data) == 0:
-        print("no results")
-        return
+    if result_path.is_file() and gt_path.is_file(): # single image
+        print("single image...")
+        imagename = result_path.stem
+        jaccard_overall, data = eval_jaccard(result_path_str, gt_path_str)
+        if len(data) == 0:
+            print("no results")
+            return
+        write_results(output_path_str, [(imagename, data)])
+        #print(data)
+        print("overall jaccard = {}".format(jaccard_overall))
+    elif result_path.is_dir() and gt_path.is_dir(): # batch
+        print("batch...")
+        results_batch = []
+        for file_gt in gt_path.iterdir():
+            imagename = file_gt.stem
+            files_matching = list(result_path.glob("*{}*.*".format(imagename)))
+            if len(files_matching) == 0:
+                print("no matching file was found for image: {}".format(imagename))
+                continue
+            if len(files_matching) > 1:
+                print("warning: more than one matching file was found for image: {}".format(imagename))
 
-    write_results(output_path, [(imagename, data)])
-
-    print(jaccard_overall)
-    print(data)
+            #print(str(file_gt), str(files_matching[0]))
+            jaccard_overall, data = eval_jaccard(str(files_matching[0]), str(file_gt))
+            if len(data) == 0:
+                print("no results for image {}".format(imagename))
+                continue
+            print("image {}: overall jaccard = {}".format(imagename, jaccard_overall))
+            results_batch.append((imagename, data))
+        write_results(output_path_str, results_batch)
+        print("finished. evaluation results of {} images have been stored.".format(len(results_batch)))
+    else:
+        print("input paths must either both be files or directories!")
 
 if __name__ == '__main__':
     main()
