@@ -4,6 +4,7 @@ import numpy as np
 import sys
 from imageio import imread
 import skimage.measure
+from pathlib import Path, PurePath
 
 BGLABEL = 0
 
@@ -14,7 +15,7 @@ def eval_jaccard(filepath_result, filepath_gt):
     maxlabel = np.amax(img_gt)
     intersection_area_overall = 0
     unions_overall = np.logical_or(np.not_equal(img_result, BGLABEL), np.not_equal(img_gt, BGLABEL))
-    results = []
+    data = []
     for label in range(maxlabel + 1):
         if label == BGLABEL:
             continue
@@ -29,24 +30,43 @@ def eval_jaccard(filepath_result, filepath_gt):
         jaccard = intersection_area / union_area
         # count connected components in gt image
         _, num_gt_regions = skimage.measure.label(labelimg_gt, return_num=True)
-        results.append((label, num_gt_regions, jaccard))
+        data.append((label, num_gt_regions, jaccard))
 
-    results_mat = np.asarray(results, dtype=np.double)
+    data_mat = np.asarray(data, dtype=np.double)
     # mean jaccard index weighted by number of components per class
-    jaccard_overall = np.dot(results_mat[:, 1], results_mat[:, 2]) / np.sum(results_mat[:, 1])
+    jaccard_overall = np.dot(data_mat[:, 1], data_mat[:, 2]) / np.sum(data_mat[:, 1])
 
-    return jaccard_overall, results_mat
+    return jaccard_overall, data
+
+def write_results(output_path, results_batch):
+    with open(output_path, "w") as f:
+        # iterate over results of all images
+        for results in results_batch:
+            imagename, data = results
+            for tpl in data:
+                f.write(';'.join(map(str, (imagename,) + tpl)) + '\n')
 
 def main():
-    if len(sys.argv) == 3:
-        jaccard_overall, results_mat = eval_jaccard(sys.argv[1], sys.argv[2])
-        if len(results_mat) == 0:
-            print("no results")
-        else:
-            print(jaccard_overall)
-            print(results_mat)
-    else:
-        print("usage:\n{} <filepath_result> <filepath_gt>".format(sys.argv[0]))
+    if len(sys.argv) != 4:
+        print("usage:\n{} <filepath_result> <filepath_gt> <output_path>".format(sys.argv[0]))
+        return
+
+    result_path = sys.argv[1]
+    gt_path = sys.argv[2]
+    output_path = sys.argv[3]
+
+    #if Path(result_path).is_file() and Path(gt_path).is_file():
+    imagename = PurePath(result_path).stem
+
+    jaccard_overall, data = eval_jaccard(result_path, gt_path)
+    if len(data) == 0:
+        print("no results")
+        return
+
+    write_results(output_path, [(imagename, data)])
+
+    print(jaccard_overall)
+    print(data)
 
 if __name__ == '__main__':
     main()
